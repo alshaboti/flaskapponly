@@ -1,0 +1,101 @@
+{
+    "type": "NetworkGraph",
+    "label": "Home Network",
+    "protocol": "OpenFlow",
+    "version": "1.3",
+
+    "nodes": [
+        {
+            "id": "192.168.10.254",
+            "label": "Gateway",
+            "properties": {
+                "hostname": "piDHCPserver",
+                 "gateway": true
+            }
+        },
+        {
+            "id": "192.168.10.1",
+            "label": "Android mobile",
+            "properties": {
+                "hostname": "Android3423.34324ca",
+                "gateway": false
+            }
+        },
+        {
+            "id": "192.168.10.2",
+            "label": "NFV",
+            "properties": {
+                "hostname": "NFVhost",
+                "gateway": false
+            }
+        },
+        {
+            "id": "192.168.10.4",
+            "label": "mylaptop",
+            "properties": {
+                "hostname": "net.moh"
+            }
+        }
+    ],
+    "links": [
+        {
+            "source": "192.168.10.254",
+            "target": "192.168.10.1",
+            "cost": 1,
+            "properties": {
+                "tx": 0.900,
+                "rx": 0.497,
+                "bitrate": "20 mbit/s",
+                "type": "wireless"
+            }
+        },
+        {
+            "source": "192.168.10.1",
+            "target": "192.168.10.254",
+            "cost": 1,
+            "properties": {
+                "tx": 0.900,
+                "rx": 0.497,
+                "bitrate": "20 mbit/s",
+                "type": "wireless"
+            }
+        },
+        {
+            "source": "192.168.10.254",
+            "target": "192.168.10.2",
+            "cost": 1.0,
+            "properties": {
+                "tx": 0.900,
+                "rx": 0.497,
+                "bitrate": "100 mbit/s",
+                "type": "ethernet",
+                "protocols": ["ssh","http"]
+            }
+        },
+        {
+            "target": "192.168.10.254",
+            "source": "192.168.10.2",
+            "cost": 1.0,
+            "properties": {
+                "tx": 0.900,
+                "rx": 0.497,
+                "bitrate": "100 mbit/s",
+                "type": "ethernet",
+                "protocols":["ssh","http"]
+            }
+        },
+        {
+            "source": "192.168.10.254",
+            "target": "192.168.10.4",
+            "cost": 1,
+            "properties": {
+                "tx": 0.900,
+                "rx": 0.497,
+                "bitrate": "100 mbit/s",
+                "type": "ethernet",
+                "protocols": "HTTP"
+            }
+        }
+        ]
+  
+}

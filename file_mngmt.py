@@ -1,6 +1,6 @@
 import os
 import re
-import paramiko
+#import paramiko
 
 from yaml import load, dump, YAMLError
 from  protocol_translation import proto_trans
@@ -11,18 +11,9 @@ import json
 def reset_faucet_config():
     os.system("ssh moh@192.168.5.8 cp etc/ryu/faucet/faucet-def.yaml etc/ryu/faucet/faucet.yaml")
 
-def ssh_command(host_name, port, user_name, password, command):
-   ssh_client = paramiko.SSHClient()
-
-   out = ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-   out = ssh_client.load_system_host_keys()
-   out = ssh_client.connect(host_name,port, user_name, password)
-   stdin, stdout, stderr = ssh_client.exec_command(command)
-   return [stdout, stdin, stderr]
-
 def get_dhcp_leases():
 
-   os.system("scp pi@192.168.10.254:/var/lib/misc/dnsmasq.leases dnsmasq.leases")
+   #os.system("scp pi@192.168.10.254:/var/lib/misc/dnsmasq.leases dnsmasq.leases")
    with open('dnsmasq.leases', 'r') as file_stream:
      leases = file_stream.read()
 
@@ -39,7 +30,7 @@ def get_dhcp_leases():
    
 # get faucet yaml file using ssh client 
 def get_faucet_yaml():
-   os.system("scp moh@192.168.5.8:/home/moh/etc/ryu/faucet/faucet.yaml faucet.yaml")
+   #os.system("scp moh@192.168.5.8:/home/moh/etc/ryu/faucet/faucet.yaml faucet.yaml")
 
    with open('faucet.yaml', 'r') as file_stream:
      try:
@@ -61,8 +52,8 @@ def set_faucet_yaml(faucet_yaml):
     with open("faucet.yaml", "w") as fd:
         dump(faucet_yaml, fd, default_flow_style=False)
     # it works as long as you set ssh key between the two hosts
-    os.system("scp faucet.yaml moh@192.168.5.8:/home/moh/etc/ryu/faucet/faucet.yaml")
-    os.system("ssh root@192.168.5.8 docker exec reannz_faucet pkill -HUP -f faucet.faucet") #pkill -HUP -f faucet.faucet")
+    #os.system("scp faucet.yaml moh@192.168.5.8:/home/moh/etc/ryu/faucet/faucet.yaml")
+    #os.system("ssh root@192.168.5.8 docker exec reannz_faucet pkill -HUP -f faucet.faucet") #pkill -HUP -f faucet.faucet")
 
 
 def get_blocked_devs(joined_dev_macs):
@@ -85,20 +76,21 @@ def get_blocked_devs(joined_dev_macs):
 
 #request faucet status through promethous 
 def get_faucet_macs():
-    resp= requests.get('http://192.168.5.8:9244').content
-    faucet_resp = str(resp)
-    learned_macs = re.findall(r'learned_macs{[\w+,\=,\",},\s]+\d{1,}',faucet_resp)
-    mac_pad = '00:00:00:00:00:00'
-    faucet_learned_macs = []
-    for line in learned_macs:
-       mac = line.split()[-1]
-       if mac != '0':
-          mac = hex(int(mac))
-          mac =  mac[2:] # remove 0x
-          mac =  ':'.join(format(s, '02x') for s in bytes.fromhex(mac))
-          mac = mac_pad[:17-len(mac)] + mac
-          faucet_learned_macs.append(mac)
-
+    # resp= requests.get('http://192.168.5.8:9244').content
+    # faucet_resp = str(resp)
+    # learned_macs = re.findall(r'learned_macs{[\w+,\=,\",},\s]+\d{1,}',faucet_resp)
+    # mac_pad = '00:00:00:00:00:00'
+    # faucet_learned_macs = []
+    # for line in learned_macs:
+    #    mac = line.split()[-1]
+    #    if mac != '0':
+    #       mac = hex(int(mac))
+    #       mac =  mac[2:] # remove 0x
+    #       mac =  ':'.join(format(s, '02x') for s in bytes.fromhex(mac))
+    #       mac = mac_pad[:17-len(mac)] + mac
+    #       faucet_learned_macs.append(mac)
+    faucet_learned_macs = ['28:ba:b5:de:64:e7', 'b8:27:eb:d3:f8:8c',
+    '34:8a:7b:72:8d:bc', '00:1b:21:d3:1f:62']
     return  faucet_learned_macs    
 
 def get_dev_info(dev_mac, dev_info):

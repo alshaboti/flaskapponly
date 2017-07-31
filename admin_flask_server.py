@@ -1,7 +1,6 @@
 # HTTP server for HNCP
-
+import json
 from flask import Flask, render_template, request, redirect, send_from_directory
-
 
 from  protocol_translation import proto_trans
 import sys
@@ -9,9 +8,9 @@ import sys
 
 
 #for login after: pip3 install flask-login flask-sqlalchemy
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required
-from flask_login import current_user
+#from flask_sqlalchemy import SQLAlchemy
+#from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required
+#from flask_login import current_user
 
 import file_mngmt as fm
 import rule_managment as rule_mngmt 
@@ -20,61 +19,76 @@ from rule_managment import default_rule
 
 
 app = Flask(__name__, static_url_path='')
+#openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 365
+#if __name__ == "__main__":
+#    app.run(ssl_context=('cert.pem', 'key.pem'))
 
 servers = {'http_server':'00:1b:21:d3:1f:62','gW_Server': 'b8:27:eb:e6:70:f1'}
+ignored_mac = ['ff:ff:ff:ff:ff:ff']
+def net_topology():
+  home_net_topo = {
+    "type": "NetworkGraph",
+    "label": "Home Network",
+    "protocol": "OpenFlow",
+    "version": "1.3",
+     "nodes": [],
+     "links": []
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////home/moh/flaskenv/login.db'
-app.config['SECRET_KEY'] = 'sdn.wifi'
+  }
 
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+  nodes = []
+  for dev in joined_dev_info:
+    node = {
+            "id": dev['mac'].lower(),
+            "label": dev['name'],
+            "properties": {
+              "ip": dev['ip'],
+              "gateway": False
+            }
+        }
+    nodes.append(node)
 
-db = SQLAlchemy(app)
-login_manager = LoginManager()
-login_manager.init_app(app)
+  links = []
+  for policy in net_policy:
+    if not(policy['from_mac'].lower() in joined_dev_macs and \
+       policy['to_mac'].lower() in joined_dev_macs): 
+      continue
+    print("source ", policy['from_mac'])
+    print("target", policy['to_mac'])
+    
+    link = {
+            "source": policy['from_mac'].lower(),
+            "target": policy['to_mac'].lower(),
+            "cost": 1,
+            "properties": {
+                "tx": 0.900,
+                "rx": 0.497,
+                "bitrate": "100 mbit/s",
+                "type": "ethernet",
+                "protocols": policy['service']['service_name']
+            }
+        }
+    links.append(link)
+  print(links)    
 
-
-
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(30), unique=True)
-    password = db.Column(db.String(30)) 
-
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
+  home_net_topo['nodes'] = nodes
+  home_net_topo['links'] = links
+  with open('static/home_net.json','w') as fd:
+    json.dump(home_net_topo, fd)
 
 @app.route('/')
-def login_page():
-    if current_user.is_authenticated:
-       return redirect('/home')
-    else:
-       return render_template('login.html')
-
-
-@app.route('/login', methods=['POST'])
-def index():
-    user = User.query.filter_by(username=request.form['uname'], password = request.form['pwd']).first()
-    if user is not None:
-      login_user(user)
-      return redirect('/home')
-    return 'Fail to login, try agian!'
-
-@app.route('/logout')
-@login_required
-def logout():
-   logout_user()
-   return 'You are now logged out! '
+def root():
+  return 'hellow world!'
 
 @app.route('/home')
-@login_required
+#@login_required
 def home():
     global dev_info
     dev_info = fm.get_dhcp_leases()
 
 
     # request learned mac from faucet promethous 192.168.5.8:9244
+    global joined_dev_macs
     joined_dev_macs = fm.get_faucet_macs()
     print('joined_dev_macs OK')
 
@@ -91,16 +105,18 @@ def home():
     blocked_dev = fm.get_blocked_devs(joined_dev_macs)
     blocked_dev_info = fm.get_dev_info(blocked_dev, dev_info)
 
+
     # get faucet policy
     # let's make it static at first 
+    global net_policy
     net_policy = get_faucet_policy(faucet_yaml['acls']['wifi_acl'])
 
     return render_template('index.html', joined_dev=joined_dev_info, 
-    	blocked_dev=blocked_dev_info, net_policy= net_policy )
+      blocked_dev=blocked_dev_info, net_policy= net_policy )
 
 #Allow DHCP service for this device
 @app.route('/join', methods=['post'])
-@login_required
+#@login_required
 def join():
     rule_mngmt.add_join_rules(request.form['mac'], faucet_yaml['acls']['wifi_acl'])
 
@@ -110,7 +126,7 @@ def join():
 
 
 @app.route('/delete_policy', methods=['POST'])
-@login_required
+#@login_required
 def network_policy():
     delete_faucet_rule( int(request.form['rule_id']) )
     fm.set_faucet_yaml(faucet_yaml)
@@ -120,7 +136,7 @@ def network_policy():
 
 
 @app.route('/new_policy', methods=['GET'])
-@login_required
+#@login_required
 def new_policy():
     args = {}
     args['local_devs_list'] = joined_dev_info
@@ -130,7 +146,7 @@ def new_policy():
 
 
 @app.route('/add_policy', methods=['POST'])
-@login_required
+#@login_required
 def add_policy():
   acl_to = acl_from = faucet_yaml['acls']['wifi_acl']  
   port_no = int(request.form['service'])
@@ -153,18 +169,19 @@ def add_policy():
 
 
 @app.route('/reset', methods=['GET'])
-@login_required
+#@login_required
 def reset_faucet_config():
   fm.reset_faucet_config()
   return redirect('/home')
 
 @app.route('/show_topo', methods=['GET'])
-@login_required
+#@login_required
 def show_topology():
+  net_topology()
   return render_template('home_net_topo.html')
 
 @app.route('/static/<path:path>')
-@login_required
+#@login_required
 def static_files(path):
   return send_from_directory('static',path)
 
